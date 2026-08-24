@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "train": {
+      "class_b": 400,
+      "class_a": 400
+    },
+    "val": {
+      "class_b": 50,
+      "class_a": 50
+    },
+    "test": {
+      "class_b": 50,
+      "class_a": 50
+    }
+  },
+  "integrity": {
+    "total": 1000,
+    "bad": 0,
+    "issues": []
+  }
+}

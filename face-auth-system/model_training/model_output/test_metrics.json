@@ -1,0 +1,26 @@
+{
+  "test_loss": 0.022318534553050995,
+  "test_accuracy": 1.0,
+  "test_auc": 1.0,
+  "class_a_accuracy": 1.0,
+  "class_b_accuracy": 1.0,
+  "BASE_MODEL": "MobileNetV2",
+  "INPUT_SHAPE": [
+    224,
+    224,
+    3
+  ],
+  "NUM_CLASSES": 2,
+  "BATCH_SIZE": 32,
+  "PHASE1_EPOCHS": 10,
+  "PHASE1_LR": 0.001,
+  "PHASE2_EPOCHS": 20,
+  "PHASE2_LR": 1e-05,
+  "FINE_TUNE_AT": 100,
+  "DROPOUT_RATE": 0.3,
+  "L2_WEIGHT": 0.0001,
+  "PATIENCE": 5,
+  "CLASS_B_THRESHOLD": 0.85,
+  "PRETRAINED": "imagenet",
+  "RANDOM_SEED": 42
+}

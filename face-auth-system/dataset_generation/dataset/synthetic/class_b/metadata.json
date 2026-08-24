@@ -1,0 +1,43 @@
+{
+  "class": "class_b",
+  "count": 500,
+  "hyperparameters": {
+    "POSE_RANGE_X": [
+      -15,
+      15
+    ],
+    "POSE_RANGE_Y": [
+      -20,
+      20
+    ],
+    "POSE_RANGE_Z": [
+      -10,
+      10
+    ],
+    "BRIGHTNESS_RANGE": [
+      0.3,
+      1.8
+    ],
+    "CONTRAST_RANGE": [
+      0.4,
+      2.0
+    ],
+    "SCALE_RANGE": [
+      0.75,
+      1.3
+    ],
+    "JPEG_QUALITY_RANGE": [
+      60,
+      95
+    ],
+    "BLUR_KERNELS": [
+      3,
+      5
+    ],
+    "OUTPUT_SIZE": [
+      224,
+      224
+    ],
+    "RANDOM_SEED": 42
+  }
+}

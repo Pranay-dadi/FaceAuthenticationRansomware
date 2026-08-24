@@ -1,0 +1,7 @@
+tensorflow==2.15.0
+tensorflow-model-optimization==0.7.5
+numpy==1.26.4
+matplotlib==3.8.2
+scikit-learn==1.4.0
+seaborn==0.13.2
+tqdm==4.66.2

@@ -1,0 +1,9 @@
+{
+  "class_a_acc_argmax": 1.0,
+  "class_a_acc_threshold": 1.0,
+  "class_b_acc_argmax": 1.0,
+  "class_b_acc_threshold": 1.0,
+  "roc_auc": 1.0,
+  "pr_auc": 1.0,
+  "class_b_threshold": 0.85
+}

@@ -1,0 +1,44 @@
+{
+  "FLIP_PROB": 0.5,
+  "BRIGHTNESS": {
+    "prob": 0.7,
+    "range": [
+      0.6,
+      1.4
+    ]
+  },
+  "ROTATION": {
+    "prob": 0.6,
+    "range": [
+      -15,
+      15
+    ]
+  },
+  "GAUSSIAN_NOISE": {
+    "prob": 0.5,
+    "std_range": [
+      5,
+      25
+    ]
+  },
+  "CONTRAST": {
+    "prob": 0.4,
+    "range": [
+      0.7,
+      1.5
+    ]
+  },
+  "SATURATION": {
+    "prob": 0.3,
+    "range": [
+      0.7,
+      1.3
+    ]
+  },
+  "SPLIT": {
+    "train": 0.8,
+    "val": 0.1,
+    "test": 0.1,
+    "seed": 42
+  }
+}

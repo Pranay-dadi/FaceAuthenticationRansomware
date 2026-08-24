@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Outer scan frame corners -->
+    <path
+        android:pathData="M12,28 L12,12 L28,12"
+        android:strokeColor="@color/accent_blue"
+        android:strokeWidth="4"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <path
+        android:pathData="M68,12 L84,12 L84,28"
+        android:strokeColor="@color/accent_blue"
+        android:strokeWidth="4"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <path
+        android:pathData="M84,68 L84,84 L68,84"
+        android:strokeColor="@color/accent_blue"
+        android:strokeWidth="4"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <path
+        android:pathData="M28,84 L12,84 L12,68"
+        android:strokeColor="@color/accent_blue"
+        android:strokeWidth="4"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Face outline -->
+    <path
+        android:pathData="M48,22
+            C34,22 26,32 26,44
+            C26,58 34,68 48,70
+            C62,68 70,58 70,44
+            C70,32 62,22 48,22 Z"
+        android:strokeColor="@color/accent_blue"
+        android:strokeWidth="2.5"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round" />
+
+    <!-- Left eye -->
+    <path
+        android:pathData="M39,41
+            m-3,0
+            a3,3 0,1 0,6,0
+            a3,3 0,1 0,-6,0"
+        android:fillColor="@color/accent_blue" />
+
+    <!-- Right eye -->
+    <path
+        android:pathData="M57,41
+            m-3,0
+            a3,3 0,1 0,6,0
+            a3,3 0,1 0,-6,0"
+        android:fillColor="@color/accent_blue" />
+
+    <!-- Mouth -->
+    <path
+        android:pathData="M38,56 Q48,63 58,56"
+        android:strokeColor="@color/accent_blue"
+        android:strokeWidth="2.5"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round" />
+
+</vector>

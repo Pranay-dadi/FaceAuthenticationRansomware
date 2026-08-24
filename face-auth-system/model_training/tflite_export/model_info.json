@@ -1,0 +1,25 @@
+{
+  "model_file": "face_classifier.tflite",
+  "input_shape": [
+    1,
+    224,
+    224,
+    3
+  ],
+  "input_dtype": "<class 'numpy.float32'>",
+  "output_shape": [
+    1,
+    2
+  ],
+  "output_dtype": "<class 'numpy.float32'>",
+  "class_map": {
+    "output_index_0": "class_a \u2014 authenticated user",
+    "output_index_1": "class_b \u2014 target / unauthorised"
+  },
+  "class_b_confidence_threshold": 0.85,
+  "quantization": "dynamic-range INT8",
+  "float32_size_kb": 9302,
+  "quantized_size_kb": 2613,
+  "base_model": "MobileNetV2",
+  "input_normalisation": "pixel / 255.0 \u2192 [0.0, 1.0]"
+}

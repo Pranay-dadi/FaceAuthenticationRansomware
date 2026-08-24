@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FaceAuth</string>
+    <string name="auth_begin">Begin Authentication</string>
+    <string name="auth_success_title">Authentication\nSuccessful</string>
+    <string name="auth_fail_title">Authentication\nUnsuccessful</string>
+    <string name="scanning">Scanning…</string>
+    <string name="no_face">No face detected — centre your face</string>
+    <string name="cancel">Cancel</string>
+    <string name="done">Done</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="recent_events">Recent authentication events</string>
+    <string name="fs_title">Android Filesystem Status (target detected)</string>
+    <string name="version">v1.0 — Part 2 Android Demo</string>
+    <string name="hint_position">Position your face in frame</string>
+    <string name="class_a_label">Identity: Class A (authenticated user)</string>
+</resources>
