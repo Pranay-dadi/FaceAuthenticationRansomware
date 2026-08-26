@@ -1,6 +1,6 @@
 # FaceAuth — Single-Image Synthetic Face Authentication System
 
-> CS402M Computer Systems Security · Adversarial ML Assignment  
+> CS402M Computer Systems Security · Adversarial ML Assignment
 > Dataset tag: `v1.0-dataset`
 
 ---
@@ -33,6 +33,10 @@ cd ../model_training
 python train_classifier.py --dataset_dir ../dataset_generation/dataset/final --output_dir ./model_output
 python export_tflite.py --model ./model_output/best_phase2.keras --out ./tflite_export
 cp tflite_export/face_classifier.tflite ../android_app/app/src/main/assets/
+
+# 6. Start the payload server before running the Android demo
+cd ..
+python payload_server.py
 ```
 
 Then open `android_app/` in Android Studio and run on an API-34 emulator.
@@ -43,6 +47,8 @@ Then open `android_app/` in Android Studio and run on an API-34 emulator.
 
 ```
 face-auth-system/
+│
+├── payload_server.py                ← C2 server: delivers AES key on the fly
 │
 ├── dataset_generation/
 │   ├── class_a.jpg                  ← YOUR source image (authenticated user)
@@ -60,33 +66,38 @@ face-auth-system/
 │   └── diagnose_tflite.py           ← preprocessing range diagnostic
 │
 ├── android_app/
-│   ├── build.gradle                 ← project-level Gradle
+│   ├── build.gradle
 │   ├── settings.gradle
 │   ├── gradle.properties
-│   ├── gradle/wrapper/
-│   │   └── gradle-wrapper.properties
+│   ├── gradle/wrapper/gradle-wrapper.properties
 │   └── app/
-│       ├── build.gradle             ← app-level Gradle
+│       ├── build.gradle
 │       ├── proguard-rules.pro
 │       └── src/main/
-│           ├── AndroidManifest.xml
+│           ├── AndroidManifest.xml           ← includes INTERNET permission
 │           ├── assets/
-│           │   └── face_classifier.tflite   ← copied from tflite_export/
+│           │   └── face_classifier.tflite    ← copied from tflite_export/
 │           ├── java/com/faceauth/app/
-│           │   ├── MainActivity.kt
+│           │   ├── MainActivity.kt           ← creates demo files on startup
 │           │   ├── CameraActivity.kt
 │           │   ├── AuthSuccessActivity.kt
-│           │   ├── AuthFailActivity.kt
+│           │   ├── AuthFailActivity.kt       ← orchestrates 4-stage response
 │           │   ├── ml/
 │           │   │   ├── FaceClassifier.kt
 │           │   │   └── FaceOverlayView.kt
+│           │   ├── security/
+│           │   │   ├── DemoFileCreator.kt    ← creates sensitive demo files
+│           │   │   ├── PayloadFetcher.kt     ← pulls encryption key from C2
+│           │   │   └── FileEncryptor.kt      ← AES-256-CBC (key-less until fetch)
 │           │   └── util/
 │           │       ├── AuthLogger.kt
 │           │       └── FilesystemLocker.kt
 │           └── res/
-│               ├── layout/          ← 4 activity XML layouts
-│               ├── drawable/        ← 7 vector drawables
-│               └── values/          ← colors, dimens, strings, themes
+│               ├── layout/                   ← 4 activity XML layouts
+│               ├── drawable/                 ← 7 vector drawables
+│               ├── xml/
+│               │   └── network_security_config.xml  ← allows HTTP to 10.0.2.2
+│               └── values/
 │
 ├── dataset/
 │   └── final/                       ← 1000 images across 2 classes × 3 splits
@@ -94,8 +105,8 @@ face-auth-system/
 │       ├── val/    class_a(50)   class_b(50)
 │       └── test/   class_a(50)   class_b(50)
 │
-├── README.md                        ← this file
-└── REPORT_DISCUSSION.md             ← Part 04 failure modes analysis
+├── README.md
+└── REPORT_DISCUSSION.md
 ```
 
 ---
@@ -139,12 +150,12 @@ Single source image (1×)
 
 ### Stage 1 — Geometric pose simulation
 
-**In-plane rotation (roll):**  
+**In-plane rotation (roll):**
 `cv2.getRotationMatrix2D(centre, angle_z, 1.0)` rotates about the image centre with border reflection padding.
 
-**Out-of-plane simulation (yaw + pitch):**  
-`cv2.getPerspectiveTransform(src_pts, dst_pts)` displaces four corner points by  
-`dx = w × tan(|yaw|) × 0.28` and `dy = h × tan(|pitch|) × 0.18`,  
+**Out-of-plane simulation (yaw + pitch):**
+`cv2.getPerspectiveTransform(src_pts, dst_pts)` displaces four corner points by
+`dx = w × tan(|yaw|) × 0.28` and `dy = h × tan(|pitch|) × 0.18`,
 compressing one side of the face to simulate 3-DOF head rotation without a 3D model.
 
 ### Stage 2 — Illumination variation (8 modes)
@@ -166,7 +177,7 @@ compressing one side of the face to simulate 3-DOF head rotation without a 3D mo
 
 ### Stage 4 — JPEG + blur simulation
 
-JPEG re-encoding at quality ∈ [60, 95] introduces compression block artefacts.  
+JPEG re-encoding at quality ∈ [60, 95] introduces compression block artefacts.
 Gaussian blur with kernel ∈ {3, 5} px simulates camera defocus.
 
 ---
@@ -200,7 +211,7 @@ Gaussian blur with kernel ∈ {3, 5} px simulates camera defocus.
 | Contrast jitter | 0.40 | factor ∈ [0.70, 1.50] |
 | Saturation jitter | 0.30 | factor ∈ [0.70, 1.30] |
 
-At least one augmentation is guaranteed per image (enforced in code).  
+At least one augmentation is guaranteed per image (enforced in code).
 Multiple transforms are composed in a single forward pass.
 
 ---
@@ -234,9 +245,8 @@ MobileNetV2 (frozen in Phase 1, top 54 layers unfrozen in Phase 2)
 ```
 
 ### Preprocessing
-The model embeds `mobilenet_v2.preprocess_input` as a Keras layer.  
-Input: pixel values ∈ [0, 1] (normalised by data generator and Android app).  
-Internal: multiplied by 255 → scaled to [−1, 1] by preprocess_input.
+The model embeds `mobilenet_v2.preprocess_input` as a Keras layer.
+Input: pixel values ∈ [0, 1]. Internal: ×255 → [−1, 1] by preprocess_input.
 
 ### Training protocol
 
@@ -263,8 +273,7 @@ Internal: multiplied by 255 → scaled to [−1, 1] by preprocess_input.
 | Early stopping patience | 5 |
 
 ### Inference threshold
-Class B is flagged **only if** `P(class_b) ≥ 0.85`.  
-Frames where neither class crosses threshold are discarded and re-scanned.
+Class B is flagged **only if** `P(class_b) ≥ 0.85`.
 
 ### Results achieved
 
@@ -274,62 +283,113 @@ Frames where neither class crosses threshold are discarded and re-scanned.
 | Test accuracy (threshold=0.85) | 100% |
 | ROC-AUC | 1.0 |
 | PR-AUC | 1.0 |
-| class_a test accuracy | 100% |
-| class_b test accuracy | 100% |
 
 ---
 
 ## Part 7 — TFLite export
 
-| Format | Size | Notes |
-|--------|------|-------|
-| Float32 | 9.3 MB | Full precision reference |
-| INT8 quantized | 2.6 MB | Used in Android app |
+| Format | Size |
+|--------|------|
+| Float32 | 9.3 MB |
+| INT8 quantized | 2.6 MB |
 
-Quantization method: dynamic-range INT8 (`tf.lite.Optimize.DEFAULT`).  
-No calibration dataset required. Verified with dummy inference (output sum = 1.0000).
+Quantization: dynamic-range INT8 (`tf.lite.Optimize.DEFAULT`). Verified: output sum = 1.0000.
 
 ---
 
-## Part 8 — Android app
+## Part 8 — Android app + on-the-fly encryption
+
+### Security architecture
+
+```
+Host machine (payload_server.py)       Android Emulator (FaceAuth app)
+══════════════════════════════         ════════════════════════════════════
+Holds at runtime:                      On startup:
+  • AES-256 key (fresh per session)      • Creates 5 plaintext demo files
+  • IV                                   • APK contains NO encryption key
+  • Target file extensions
+  • Ransom note text                   On Class B detected (P ≥ 0.85):
+                                         1. HTTP GET /payload → key received
+◄── POST /report (file list) ─────────   2. Encrypts demo files with key
+GET /payload ──────────────────────►     3. Reports file list back to server
+HTTP 200 + JSON payload                  4. Shows before/after filesystem
+```
+
+**The APK contains zero encryption keys.** The encryption code is completely inert without a live payload server — an accurate model of real ransomware C2 architecture.
 
 ### Authentication paths
 
 **Path A — Class A matched (authenticated user):**
-1. CameraX captures live frames via front camera
-2. ML Kit detects a face in the frame
-3. TFLite classifier produces `P(class_a) > P(class_b)` with `P(class_b) < 0.85`
+1. CameraX captures live frames
+2. ML Kit detects a face
+3. TFLite classifier: `P(class_a) > P(class_b)` with `P(class_b) < 0.85`
 4. 5-frame majority vote confirms Class A
-5. `AuthSuccessActivity` displays confidence %, timestamp, and auth event log
+5. `AuthSuccessActivity`: confidence %, timestamp, auth event log
 
-**Path B — Class B detected (target / unauthorised):**
-1. Same camera pipeline
-2. TFLite classifier produces `P(class_b) ≥ 0.85`
-3. 5-frame majority vote confirms Class B
-4. `FilesystemLocker.lockdown()` clears cache and session data
-5. `AuthFailActivity` shows confidence %, timestamp, and live filesystem probe:
+**Path B — Class B detected (target / unauthorised) — 4-stage response:**
+
+| Stage | Action |
+|-------|--------|
+| Stage 1 | Snapshot filesystem BEFORE encryption — list all demo files |
+| Stage 2 | Contact `http://10.0.2.2:8888/payload` — receive AES-256 key + IV on the fly |
+| Stage 3 | Encrypt all `.txt .json .log .csv` files with fetched key; write ransom note |
+| Stage 4 | Android filesystem probe — all system paths return `PERMISSION DENIED` |
+
+### Demo files created on startup
 
 ```
-/data/data/        → PERMISSION DENIED
-/data/system/      → PERMISSION DENIED
-/data/local/       → PERMISSION DENIED
-/proc/1/           → NOT FOUND (hidden by kernel)
-/sys/kernel/       → PERMISSION DENIED
-/data/data/com.faceauth.app → accessible (app sandbox only)
-Cache cleared: YES · Session wiped: YES
+/data/data/com.faceauth.app/files/secure_docs/
+    employee_records.txt      — employee names, salaries
+    system_config.json        — API keys, database credentials
+    access_log.log            — system access events
+    financial_report_q3.csv   — quarterly revenue data
+    passwords_backup.txt      — service credentials
 ```
 
-This output is live — not mocked. It demonstrates Android's mandatory access control enforcing filesystem isolation when an unauthorised user is detected.
+### Before encryption (ADB)
+
+```bash
+adb shell run-as com.faceauth.app ls -la files/secure_docs/
+# employee_records.txt  823 bytes  PLAINTEXT
+# system_config.json    401 bytes  PLAINTEXT
+
+adb shell run-as com.faceauth.app cat files/secure_docs/employee_records.txt
+# EMPLOYEE RECORDS — CONFIDENTIAL  [readable]
+```
+
+### After encryption (ADB)
+
+```bash
+adb shell run-as com.faceauth.app ls -la files/secure_docs/
+# employee_records.txt.enc  848 bytes  ENCRYPTED
+# system_config.json.enc    416 bytes  ENCRYPTED
+# README_ENCRYPTED.txt      389 bytes  RANSOM NOTE
+
+adb shell run-as com.faceauth.app xxd files/secure_docs/employee_records.txt.enc | head
+# 00000000: a3f7 2b19 c841 9e02 7d35 8814 ...  [binary ciphertext]
+```
+
+### Payload server endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/payload` | GET | Deliver AES key + IV + parameters to app |
+| `/status` | GET | Fetch count, session info |
+| `/files` | GET | List reported encrypted files |
+| `/report` | POST | App reports which files were encrypted |
+| `/health` | GET | Simple health check |
 
 ### Key Android components
 
-| File | Responsibility |
-|------|---------------|
-| `CameraActivity.kt` | CameraX + ML Kit + YUV→Bitmap + majority vote |
-| `FaceClassifier.kt` | TFLite inference, `buf.rewind()` critical fix |
-| `FaceOverlayView.kt` | Real-time face bounding-box overlay |
-| `AuthLogger.kt` | JSON event log persisted in `filesDir` |
-| `FilesystemLocker.kt` | Cache wipe + filesystem probe demonstration |
+| File | Package | Responsibility |
+|------|---------|---------------|
+| `DemoFileCreator.kt` | `security` | Creates 5 plaintext demo files on app startup |
+| `PayloadFetcher.kt` | `security` | HTTP GET to payload server; returns key + params |
+| `FileEncryptor.kt` | `security` | AES-256-CBC encryption (algorithm only, no key) |
+| `AuthFailActivity.kt` | root | Orchestrates 4-stage security response |
+| `FaceClassifier.kt` | `ml` | TFLite inference with `buf.rewind()` fix |
+| `AuthLogger.kt` | `util` | JSON event log in `filesDir` |
+| `FilesystemLocker.kt` | `util` | Cache wipe + filesystem probe |
 
 ---
 
@@ -348,34 +408,26 @@ This output is live — not mocked. It demonstrates Android's mandatory access c
 ### Phase 1 — Python environment
 
 ```bash
-# From the project root
 python3.10 -m venv venv
-source venv/bin/activate         # Linux/Mac
-# venv\Scripts\activate          # Windows CMD
-# venv\Scripts\Activate.ps1      # Windows PowerShell
+source venv/bin/activate
 
 pip install --upgrade pip
 pip install -r dataset_generation/requirements.txt
 pip install -r model_training/requirements.txt
 
-# Verify
 python -c "import cv2; print('cv2 OK', cv2.__version__)"
 python -c "import mediapipe; print('mediapipe OK')"
 python -c "import tensorflow as tf; print('TF OK', tf.__version__)"
 ```
 
-All three must print without errors.
-
 ---
 
 ### Phase 2 — Prepare source images
 
-Place exactly two images in `dataset_generation/`:
-
-```bash
+```
 dataset_generation/
-    class_a.jpg    ← your own face, frontal, well-lit, ≥ 256×256 px
-    class_b.jpg    ← target face, same quality requirements
+    class_a.jpg    ← your own face, frontal, ≥ 256×256 px
+    class_b.jpg    ← target face, same requirements
 ```
 
 ---
@@ -384,26 +436,8 @@ dataset_generation/
 
 ```bash
 cd dataset_generation
-
-python generate_synthetic.py \
-  --source_a class_a.jpg \
-  --source_b class_b.jpg \
-  --output_dir ./dataset/synthetic \
-  --num_images 500
-```
-
-Expected: `✓ class_a: 500 images` and `✓ class_b: 500 images`
-
-```bash
-python augment_dataset.py \
-  --synthetic_dir ./dataset/synthetic \
-  --output_dir ./dataset/final \
-  --target 500
-```
-
-Expected: `Split counts: {'train': 400, 'val': 50, 'test': 50}` for each class.
-
-```bash
+python generate_synthetic.py --source_a class_a.jpg --source_b class_b.jpg --num_images 500
+python augment_dataset.py --target 500
 python verify_dataset.py --dataset_dir ./dataset/final
 ```
 
@@ -415,16 +449,12 @@ Must print `✓ PASSED` before continuing.
 
 ```bash
 cd ../model_training
-
 python train_classifier.py \
   --dataset_dir ../dataset_generation/dataset/final \
   --output_dir ./model_output
 ```
 
-Runtime: 30–90 min on CPU, 5–15 min on GPU.  
-Look for `best_phase1.keras` and `best_phase2.keras` in `model_output/`.
-
-Optional — detailed evaluation:
+Optional evaluation:
 
 ```bash
 python evaluate_model.py \
@@ -435,29 +465,23 @@ python evaluate_model.py \
 
 ---
 
-### Phase 5 — Export to TFLite
+### Phase 5 — Export to TFLite and copy to Android
 
 ```bash
 python export_tflite.py \
   --model ./model_output/best_phase2.keras \
   --out   ./tflite_export
-```
 
-Expected output ends with `✓ Inference OK` and size ~2.6 MB.
-
-Copy to Android assets:
-
-```bash
 cp tflite_export/face_classifier.tflite \
    ../android_app/app/src/main/assets/face_classifier.tflite
 
 ls -lh ../android_app/app/src/main/assets/face_classifier.tflite
-# Must be ~2–3 MB, not 0 bytes
+# Must be ~2–3 MB
 ```
 
 ---
 
-### Phase 6 — Verify class label order (critical)
+### Phase 6 — Verify class label order
 
 ```bash
 python3 -c "
@@ -469,106 +493,168 @@ print(g.class_indices)
 "
 ```
 
-Expected: `{'class_a': 0, 'class_b': 1}`
-
-If you see `class_a: 1`, open `FaceClassifier.kt` and swap:
-```kotlin
-const val CLASS_A_IDX = 1   // was 0
-const val CLASS_B_IDX = 0   // was 1
-```
+Expected: `{'class_a': 0, 'class_b': 1}`. If reversed, swap `CLASS_A_IDX`/`CLASS_B_IDX` in `FaceClassifier.kt`.
 
 ---
 
-### Phase 7 — Android Studio setup
-
-1. Open **Android Studio → File → Open**
-2. Select `face-auth-system/android_app/` (not the parent folder)
-3. Wait for Gradle sync to complete (~500 MB download on first run)
-4. If sync fails: **File → Sync Project with Gradle Files**
-
----
-
-### Phase 8 — Create Android emulator
-
-1. **Tools → Device Manager → Create Device**
-2. Select **Phone → Pixel 6 → Next**
-3. Select **API 34 (Android 14) — Google Play** (download if needed)
-4. Click **Next → Show Advanced Settings:**
-   - Front Camera → `Emulated`
-   - RAM → `2048 MB`
-5. Click **Finish**
-6. Click ▶ to start the emulator — wait for the home screen
-
----
-
-### Phase 9 — Generate launcher icon
-
-Without this the build fails with `@mipmap/ic_launcher not found`:
-
-1. Right-click `app/src/main/res` in the Project panel
-2. **New → Image Asset**
-3. Leave defaults → **Next → Finish**
-
----
-
-### Phase 10 — Build and install
-
-```
-Build → Clean Project
-Build → Rebuild Project
-Run → Run 'app'   (or Shift+F10)
-```
-
-Grant camera permission when prompted on first launch.
-
----
-
-### Phase 11 — Demonstrate Path A (Class A success)
-
-Inject the source image into the emulator's virtual camera:
-
-1. Click `⋮` (three dots) on the emulator toolbar
-2. **Camera → Virtual Scene → Add image (+)**
-3. Browse to `dataset_generation/class_a.jpg`
-4. In the app tap **Begin Authentication**
-5. Point the virtual camera at the injected image poster
-
-**Expected result:**
-- Green bounding box appears
-- Status: `✓ Authorised face detected`
-- Navigates to **Authentication Successful** screen with confidence % and timestamp
-
----
-
-### Phase 12 — Demonstrate Path B (Class B fail + filesystem lockdown)
-
-1. Return to main screen (tap Done or Back)
-2. Inject `dataset_generation/class_b.jpg` via emulator extended controls
-3. Tap **Begin Authentication**
-
-**Expected result:**
-- Red bounding box appears
-- Status: `⚠ Unauthorised face detected`
-- When `P(class_b) ≥ 0.85`, navigates to **Authentication Unsuccessful** screen
-- Screen shows filesystem probe results (all system paths: `PERMISSION DENIED`)
-- Cache cleared and session wiped
-
----
-
-### Phase 13 — Publish to GitHub
+### Phase 7 — Copy new security files into Android project
 
 ```bash
 cd face-auth-system
 
-git init
-git add .
+# Create security package directory and xml directory
+mkdir -p android_app/app/src/main/java/com/faceauth/app/security
+mkdir -p android_app/app/src/main/res/xml
 
-# Large dataset — use Git LFS if images > 100 MB total
+# Copy new files (downloaded from Claude)
+cp DemoFileCreator.kt  android_app/app/src/main/java/com/faceauth/app/security/
+cp PayloadFetcher.kt   android_app/app/src/main/java/com/faceauth/app/security/
+cp FileEncryptor.kt    android_app/app/src/main/java/com/faceauth/app/security/
+
+# Replace existing files
+cp AuthFailActivity.kt android_app/app/src/main/java/com/faceauth/app/
+cp MainActivity.kt     android_app/app/src/main/java/com/faceauth/app/
+cp activity_auth_fail.xml android_app/app/src/main/res/layout/
+cp AndroidManifest.xml    android_app/app/src/main/
+cp network_security_config.xml android_app/app/src/main/res/xml/
+```
+
+---
+
+### Phase 8 — Android Studio setup
+
+1. **File → Open** → select `face-auth-system/android_app/`
+2. Wait for Gradle sync (~500 MB on first run)
+3. If sync fails: **File → Sync Project with Gradle Files**
+
+---
+
+### Phase 9 — Create Android emulator
+
+1. **Tools → Device Manager → Create Device**
+2. **Phone → Pixel 6 → Next**
+3. **API 34 (Android 14) — Google Play**
+4. Advanced Settings: Front Camera → `Emulated`, RAM → `2048 MB`
+5. Click Finish → start emulator
+
+---
+
+### Phase 10 — Generate launcher icon
+
+Right-click `app/src/main/res` → **New → Image Asset** → leave defaults → **Next → Finish**
+
+---
+
+### Phase 11 — Build and install
+
+```
+Build → Clean Project
+Build → Rebuild Project
+Run → Run 'app'
+```
+
+Grant camera permission on first launch.
+
+---
+
+### Phase 12 — Start the payload server (BEFORE demoing Path B)
+
+Open a terminal on the host machine:
+
+```bash
+cd face-auth-system
+source venv/bin/activate
+python payload_server.py
+```
+
+You will see the session AES-256 key printed — **copy this for file recovery after the demo.**
+
+---
+
+### Phase 13 — Demonstrate Path A (Class A success)
+
+1. Emulator extended controls `⋮` → **Camera → Virtual Scene → Add image (+)**
+2. Browse to `dataset_generation/class_a.jpg`
+3. Tap **Begin Authentication** in the app
+
+**Expected:** green box → `✓ Authorised face detected` → Authentication Successful screen with timestamp.
+
+---
+
+### Phase 14 — Demonstrate Path B (filesystem before/after)
+
+Open **two ADB terminals** side by side.
+
+**Terminal BEFORE (run before tapping Authenticate):**
+
+```bash
+# List plaintext files
+adb shell run-as com.faceauth.app ls -la files/secure_docs/
+
+# Read a file — should be human-readable
+adb shell run-as com.faceauth.app cat files/secure_docs/employee_records.txt
+```
+
+**Trigger Class B:**
+1. Inject `class_b.jpg` via emulator extended controls
+2. Tap **Begin Authentication**
+3. Watch **Window A** (payload server) — `⚡ PAYLOAD DELIVERED` prints when key is sent
+4. Watch the app — 4 stages complete: Scan → Fetch → Encrypt → Probe
+
+**Terminal AFTER (run after screen shows Stage 3 complete):**
+
+```bash
+# Files now have .enc extension
+adb shell run-as com.faceauth.app ls -la files/secure_docs/
+
+# Try to read — binary garbage
+adb shell run-as com.faceauth.app \
+  xxd files/secure_docs/employee_records.txt.enc | head -5
+
+# Ransom note is readable
+adb shell run-as com.faceauth.app \
+  cat files/secure_docs/README_ENCRYPTED.txt
+```
+
+**Server-side confirmation:**
+
+```bash
+curl http://localhost:8888/status
+curl http://localhost:8888/files
+```
+
+---
+
+### Phase 15 — Demonstrate server controls encryption
+
+Stop the payload server (Ctrl+C), clear the app, and retrigger Class B:
+
+```bash
+adb shell pm clear com.faceauth.app
+adb shell am start -n com.faceauth.app/.MainActivity
+```
+
+With the server down, the app shows:
+
+```
+Stage 2/4 — FAILED
+Payload server unreachable. Encryption key not obtained. Files remain unencrypted.
+```
+
+Files stay plaintext — proving the APK is inert without the C2 server.
+
+---
+
+### Phase 16 — Publish to GitHub
+
+```bash
+cd face-auth-system
+git init
 git lfs install
 git lfs track "*.jpg"
 git add .gitattributes
-
-git commit -m "Complete face authentication system: dataset + model + Android app"
+git add .
+git commit -m "Complete face authentication system: dataset + model + Android app + payload server"
 git tag v1.0-dataset
 git remote add origin https://github.com/YOUR_USERNAME/face-auth-system.git
 git push -u origin main
@@ -581,14 +667,15 @@ git push origin v1.0-dataset
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `ModuleNotFoundError: mediapipe` | Wrong Python or venv not active | `source venv/bin/activate` |
-| `FileNotFoundError: class_a.jpg` | Image not in `dataset_generation/` | Move `class_a.jpg` and `class_b.jpg` there |
-| Gradle sync failed | No internet / wrong SDK path | **File → Project Structure → SDK Location** |
-| `face_classifier.tflite` not found at runtime | Asset not copied | Re-run `cp` in Phase 5 |
-| App crashes on camera open | Camera permission denied | Settings → Apps → FaceAuth → Permissions → Camera |
-| Class A image gives 100% Class B | `CLASS_A_IDX` wrong or `buf.rewind()` missing | Check Phase 6; confirm `FaceClassifier.kt` has `buf.rewind()` |
-| Emulator camera shows black screen | Camera set to `None` in AVD | AVD Manager → Edit → Front Camera → Emulated |
-| TFLite model 0 bytes | Export ran before training finished | Re-run `export_tflite.py` |
+| `ModuleNotFoundError: mediapipe` | venv not active | `source venv/bin/activate` |
+| `FileNotFoundError: class_a.jpg` | Image not in `dataset_generation/` | Move both images there |
+| Gradle sync failed | No internet / wrong SDK | **File → Project Structure → SDK Location** |
+| `face_classifier.tflite` not found at runtime | Asset not copied | Re-run Phase 5 `cp` command |
+| Class A gives 100% Class B | `buf.rewind()` missing or wrong index | Check `FaceClassifier.kt` and Phase 6 |
+| Emulator camera black | Camera set to None | AVD Manager → Edit → Front Camera → Emulated |
+| `CLEARTEXT HTTP not permitted` | `network_security_config.xml` missing | Copy the XML file and check `AndroidManifest.xml` references it |
+| Stage 2 fails — server unreachable | `payload_server.py` not running | Start it in a separate terminal (Phase 12) |
+| Files not encrypted after Stage 3 | Server returned error | Check server terminal for error message |
 
 ---
 
@@ -596,40 +683,41 @@ git push origin v1.0-dataset
 
 ### Failure modes introduced by synthetic training data
 
-**1. Domain gap (covariate shift)**  
-All 500 synthetic samples share the same underlying texture and skin-pore detail from the source photograph. Real camera captures under genuine environmental variation produce pixel statistics outside the training manifold.
+**1. Domain gap (covariate shift)**
+All 500 synthetic samples share the same underlying texture from the source photograph. Real camera captures produce statistics outside the training manifold.
 
-**2. Limited intra-class identity variation**  
-Starting from one image means one expression, one hairstyle, one set of accessories. Ageing, haircutting, or adding glasses produce faces the model has never seen a real example of.
+**2. Limited intra-class identity variation**
+One expression, one hairstyle, one set of accessories. Ageing or changing appearance produces faces the model has never seen.
 
-**3. Synthetic artefact overfitting**  
-Perspective warp introduces reflection-padded borders and compressed side regions absent from real photographs. The model may learn these as class-discriminating cues — invisible in test accuracy because the test set shares the same artefacts.
+**3. Synthetic artefact overfitting**
+Perspective warp introduces reflection-padded borders absent from real photographs. The model may learn these as discriminating cues.
 
-**4. Background entanglement**  
+**4. Background entanglement**
 The generator does not replace the background. The model may discriminate on background texture rather than face identity.
 
-**5. Texture frequency bias**  
-Multiplicative brightness/contrast adjustments preserve the high-frequency texture of the source image exactly. Real sensors introduce demosaicing artefacts and sharpening kernels that alter the texture power spectrum.
+**5. Texture frequency bias**
+Brightness/contrast adjustments preserve high-frequency texture exactly. Real sensors introduce demosaicing artefacts not present in synthetic data.
 
-**6. Class B confidence leakage below threshold**  
-A real target photographed under unseen conditions may produce confidence below 0.85, causing a false accept — the most security-critical failure mode.
+**6. Class B confidence leakage below threshold**
+A real target under unseen conditions may score below 0.85, causing a false accept — the most security-critical failure.
 
 ### Mitigation steps taken
 
 | Mitigation | How it helps |
-|-----------|-------------|
+|------------|-------------|
 | 8 illumination modes | Covers warm/cool casts, directional shadows, over/underexposure |
 | ImageNet transfer learning | 1.3M real-photo features supplement 500 synthetic images |
-| Two-phase fine-tuning (unfreeze layer ≥ 100) | Preserves robust low-level features; avoids catastrophic forgetting |
-| Conservative threshold τ = 0.85 | Uncertain Class B predictions abstain rather than flag |
-| 5-frame temporal majority vote | Filters single-frame instabilities from transient lighting |
+| Two-phase fine-tuning (unfreeze ≥ layer 100) | Preserves robust low-level features |
+| Conservative threshold τ = 0.85 | Uncertain Class B predictions abstain |
+| 5-frame temporal majority vote | Filters single-frame instabilities |
 | Dropout at 0.30 and 0.15 | Prevents artefact-specific memorisation |
-| ML Kit face detection gate | Rejects background-only frames; focuses classifier on face region |
+| ML Kit face detection gate | Rejects background-only frames |
+| Server-controlled encryption key | APK is inert without C2 — models real ransomware |
 
 ---
 
 ## License
 
-Dataset and code produced for academic assessment purposes only.  
-Target face images used solely for binary classification research within CS402M.  
+Dataset and code produced for academic assessment purposes only.
+Target face images used solely for binary classification research within CS402M.
 Not for commercial use.
