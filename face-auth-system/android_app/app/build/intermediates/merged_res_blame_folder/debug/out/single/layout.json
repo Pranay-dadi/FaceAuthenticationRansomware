@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.faceauth.app-mergeDebugResources-37:/layout/activity_auth_fail.xml",
+        "source": "com.faceauth.app-main-40:/layout/activity_auth_fail.xml"
+    },
+    {
+        "merged": "com.faceauth.app-mergeDebugResources-37:/layout/activity_auth_success.xml",
+        "source": "com.faceauth.app-main-40:/layout/activity_auth_success.xml"
+    },
+    {
+        "merged": "com.faceauth.app-mergeDebugResources-37:/layout/activity_camera.xml",
+        "source": "com.faceauth.app-main-40:/layout/activity_camera.xml"
+    },
+    {
+        "merged": "com.faceauth.app-mergeDebugResources-37:/layout/activity_main.xml",
+        "source": "com.faceauth.app-main-40:/layout/activity_main.xml"
+    }
+]

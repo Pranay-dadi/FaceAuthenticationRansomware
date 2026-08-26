@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1F0D">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/padding_lg"
+        android:gravity="center_horizontal">
+
+        <!-- Hero icon -->
+        <ImageView
+            android:layout_width="@dimen/icon_large"
+            android:layout_height="@dimen/icon_large"
+            android:src="@drawable/ic_check_circle"
+            android:layout_marginTop="40dp"
+            android:contentDescription="Authentication successful icon"/>
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_hero"
+            android:textColor="#FF4CAF50"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginTop="16dp"/>
+
+        <!-- Class label -->
+        <TextView
+            android:id="@+id/tvClass"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_body"
+            android:textColor="#AA4CAF50"
+            android:gravity="center"
+            android:layout_marginTop="8dp"/>
+
+        <!-- Confidence -->
+        <TextView
+            android:id="@+id/tvConfidence"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_label"
+            android:textColor="#CCFFFFFF"
+            android:gravity="center"
+            android:layout_marginTop="6dp"/>
+
+        <!-- Timestamp -->
+        <TextView
+            android:id="@+id/tvTimestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_body"
+            android:textColor="#88FFFFFF"
+            android:gravity="center"
+            android:layout_marginTop="6dp"/>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#224CAF50"
+            android:layout_marginVertical="24dp"/>
+
+        <!-- Recent log card -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Recent authentication events"
+            android:textSize="@dimen/text_body"
+            android:textColor="#774CAF50"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_caption"
+            android:textColor="#77FFFFFF"
+            android:fontFamily="monospace"
+            android:layout_marginTop="8dp"
+            android:padding="@dimen/padding_md"
+            android:background="@drawable/bg_card_success"/>
+
+        <!-- Done button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDone"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:text="Done"
+            android:layout_marginTop="32dp"
+            app:backgroundTint="#FF4CAF50"
+            app:cornerRadius="@dimen/button_radius"/>
+
+    </LinearLayout>
+</ScrollView>
